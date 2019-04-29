@@ -58,7 +58,7 @@ void loop() {
       // we have just turned of
       Serial.println("Motion ended!");
       pirState = false;
-      delay(1000);
+      delay(30000); // no refractory period with PaPIR compared to standard PIR therefore need to impose sizeable delay. 30s
     }
   }  
 }
