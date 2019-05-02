@@ -32,16 +32,19 @@ void loop() {
         if (!pirState) {
             // we have just turned on
             Serial.println("Motion detected!");
-            if ((WiFi.status() == WL_CONNECTED)) {
-                String finaltrigger = "/trigger/{event_name}/with/key/{maker_key}?value1=" + String(random(1000)); // randomint avoids duplicate status error
-                USE_SERIAL.println(WiFi.localIP());
-                HTTPClient http;
-                USE_SERIAL.print("Transmitting...\n");
-                http.begin("maker.ifttt.com", 80, finaltrigger); //HTTP    
-                int httpCode = http.GET(); // use return code if want to check response
-                http.end();
-                USE_SERIAL.println("Transmission completed.");
-                pirState = true; // blocks re-entry after successful transmission, and while continously true for motion detected
+            while(!pirState){
+               if ((WiFi.status() == WL_CONNECTED)) {
+                   String finaltrigger = "/trigger/{event_name}/with/key/{maker_key}?value1=" + String(random(1000)); // randomint avoids duplicate status error
+                   USE_SERIAL.println(WiFi.localIP());
+                   HTTPClient http;
+                   USE_SERIAL.print("Transmitting...\n");
+                   http.begin("maker.ifttt.com", 80, finaltrigger); //HTTP    
+                   int httpCode = http.GET(); // use return code if want to check response
+                   http.end();
+                   USE_SERIAL.println("Transmission completed.");
+                   pirState = true; // blocks re-entry after successful transmission, and while continously true for motion detected
+               }
+               delay(100);
             }
             delay(2000);
         }    
