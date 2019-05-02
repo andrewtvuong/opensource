@@ -46,7 +46,6 @@ void loop() {
                }
                delay(100);
             }
-            delay(2000);
         }    
     } 
     else {
