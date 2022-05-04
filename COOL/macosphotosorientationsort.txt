@@ -1,0 +1,166 @@
+(* How to use this script:
+
+https://discussions.apple.com/docs/DOC-250000558
+
+This script will split the selection and add the photos to six albums:  
+- LandscapeAlbum: an album with photos in landscape orientation
+- PortraitAlbum:  an album with photos in portrait orientation
+- SquareAlbum: an album with square photos
+- PanoramicAlbumLandscape: an album with panoramic photos in landscape orientation
+- PanoramicAlbumPortrait: an album with panoramic photos in portrait orientation
+- PanoramicAlbumSkipped: an album with media items that do not have a width or height and cannot be classified
+
+
+Open this script in Script Editor. Launch Photos.
+Select the Photos you want to distribute between the albums.
+A photo is considered to be panoramic if the ratio of width to height exceeds a threshold. This threshold is set as the variable AspectRatioThreshold. Change this variable to the ratio you want.
+
+When all all photo are selected, press the "Run" button in Script Editor.
+
+Author: léonie
+*)
+
+set defaultAspectRatio to 25 / 10 -- change this to aspect ratio threshold you want for a photo to be counted as panoramic you want to be used as a default
+
+set dialogResult to display dialog ¬
+	"Enter the aspect ratio limit for panoramic photos: " buttons {"Cancel", "OK"} ¬
+	default answer (defaultAspectRatio as text)
+set AspectRatioThreshold to (text returned of dialogResult) as real
+
+
+set LandscapeAlbumName to "LandscapeAlbum" -- change this to the name of the album where you want to collect the Landscape Photos
+
+set PortraitAlbumName to "PortraitAlbum" -- change this to the name of the album where you want to collect the Portrait  Photos
+
+set SquareAlbumName to "SquareAlbum" -- change this to the name of the album where you want to collect the Square  Photos
+
+-- Albums for panoramic photos
+
+set MyPanoramicNameH to "PanoramicAlbumLandscape"
+-- change this to the name of the album where you want to collect the horizontally panoramic Photos
+
+
+set MyPanoramicNameV to "PanoramicAlbumPortrait"
+-- change this to the name of the album where you want to collect the vertically panoramic Photos
+
+-- Album for media files without width and height
+set MySkippedName to "PanoramicAlbumSkipped"
+-- change this to the name of the album where you want to collect the media items that have no width or height
+
+tell application "Photos"
+	activate
+	-- Ensure that the albums do exist
+	
+	try
+		if not (exists container LandscapeAlbumName) then
+			make new album named LandscapeAlbumName
+		end if
+		set theLandscapeAlbum to container LandscapeAlbumName
+		
+		if not (exists container PortraitAlbumName) then
+			make new album named PortraitAlbumName
+		end if
+		set thePortraitAlbum to container PortraitAlbumName
+		
+		if not (exists container SquareAlbumName) then
+			make new album named SquareAlbumName
+		end if
+		set theSquareAlbum to container SquareAlbumName
+		
+		
+		if not (exists container MyPanoramicNameH) then
+			make new album named MyPanoramicNameH
+		end if
+		set thePanoHAlbum to container MyPanoramicNameH
+		
+		if not (exists container MyPanoramicNameV) then
+			make new album named MyPanoramicNameV
+		end if
+		set thePanoVAlbum to container MyPanoramicNameV
+		
+		if not (exists container MySkippedName) then
+			make new album named MySkippedName
+		end if
+		set thePanoSkipAlbum to container MySkippedName
+		
+		
+	on error errTexttwo number errNumtwo
+		display dialog "Cannot open albums: " & errNumtwo & return & errTexttwo
+	end try
+	
+	-- process the selected photos from the All Photos album
+	try
+		set imageSel to (get selection)
+	on error errTexttwo number errNumtwo
+		display dialog "Cannot get the selection: " & errNumtwo & return & errTexttwo
+	end try
+	
+	set portraits to {} -- the list of portrait photos
+	set landscapes to {} -- the list of landscape photos
+	set squares to {} -- the list of square format photos
+	set panosH to {} -- the list of landscape panos photos
+	set panosV to {} -- the list of portrait panos
+	set skipped to {} -- the list of other media fiiles, not photos or videos
+	
+	
+	--	check, if the album or the selected photos do contain images
+	
+	if imageSel is {} then
+		error "Please select some images."
+	else
+		repeat with im in imageSel
+			try
+				
+				tell im --get the pixel size
+					set h to its height
+					set w to its width
+				end tell
+			on error errText number errNum
+				display dialog "Error: " & errNum & return & errText & "Trying again"
+				try
+					delay 2
+					tell im
+						set h to its height
+						set w to its width
+					end tell
+				on error errTexttwo number errNumtwo
+					display dialog "Skipping image due to repeated error: " & errNumtwo & return & errTexttwo
+				end try
+				
+			end try
+			set noDimensions to (w is missing value) or (h is missing value)
+			if noDimensions then
+				set skipped to {im} & skipped
+			else
+				
+				if (w < h) then
+					set portraits to {im} & portraits
+				end if
+				if (w > h) then
+					set landscapes to {im} & landscapes
+				end if
+				if (w = h) then
+					set squares to {im} & squares
+				end if
+				if (w / h > AspectRatioThreshold) then
+					set panosH to {im} & panosH
+				end if
+				if (h / w > AspectRatioThreshold) then
+					set panosV to {im} & panosV
+				end if
+			end if
+			
+		end repeat
+		
+		add portraits to thePortraitAlbum
+		add landscapes to theLandscapeAlbum
+		add squares to theSquareAlbum
+		add panosH to thePanoHAlbum
+		add panosV to thePanoVAlbum
+		add skipped to thePanoSkipAlbum
+		
+		return "landscape photos: " & (length of landscapes) & ", portrait photos: " & (length of portraits) & ", square photos: " & (length of squares) & ", panoramic landscape: " & (length of panosH) & ", panoramic portrait: " & (length of panosV) & ", skipped: " & (length of skipped)
+		
+	end if
+	
+end tell
